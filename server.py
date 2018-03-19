@@ -2,8 +2,15 @@
 """Telegram client for the FabLab Sion."""
 
 import os
+import time
+
 import requests
 from telethon import TelegramClient, events
+
+import RPi.GPIO as GPIO
+
+# Initialize Raspberry Pi GPIO
+GPIO.setmode(GPIO.BOARD)
 
 # If an `.env` file is present, parse it contents in the environment variables
 if os.path.exists('.env'):
@@ -29,11 +36,6 @@ CLIENT = TelegramClient('fablab_telegram_client',
                         spawn_read_thread=False)
 CLIENT.start()
 
-@CLIENT.on(events.NewMessage(chats=BOT_ID, incoming=True))
-def on_bot_message(event):
-    """Handle messages from the door bot."""
-    print(event.raw_text)
-
 
 def open_door():
     """Open the door of the Espace Creation."""
@@ -42,30 +44,11 @@ def open_door():
                                    'login_password': EASYDOOR_PASSWORD})
         return s.get(EASYDOOR_OPENDOOR).status_code == 200
 
+
+@CLIENT.on(events.NewMessage(chats=BOT_ID, incoming=True))
+def on_bot_message(event):
+    """Handle messages from the door bot."""
+    open_door()
+
+
 CLIENT.idle()
-
-
-# import time
-# import RPi.GPIO as GPIO
-# GPIO.setmode(GPIO.BOARD)
-# GPIO.setup(11, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
-# GPIO.setup(13, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
-
-# while True:
-#     while GPIO.input(13) == 0:
-#         time.sleep(0.01)
-#     print('started')
-#     last = time.time()
-#     once = False
-#     triggered = True
-#     number = 0
-#     while not once or time.time() - last <= 0.2:
-#         if triggered and GPIO.input(11) == 0:
-#             last = time.time()
-#             once = True
-#             triggered = False
-#             number += 1
-#         elif GPIO.input(11) == 1:
-#             triggered = True
-#         time.sleep(0.01)
-#     print("Number {}".format(number))
