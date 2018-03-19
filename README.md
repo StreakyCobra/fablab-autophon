@@ -1,3 +1,3 @@
-# FabLab Telegram Client
+# FabLab Autophon
 
-This is a telegram client for the FabLab Sion telegram account.
+This is the repository for the «Autophon of FabLab Sion»©®
