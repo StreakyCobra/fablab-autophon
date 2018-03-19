@@ -2,6 +2,7 @@
 """Telegram client for the FabLab Sion."""
 
 import os
+import threading
 
 import requests
 from telethon import TelegramClient, events
@@ -30,6 +31,30 @@ CLIENT = TelegramClient('fablab_telegram_client',
                         spawn_read_thread=False)
 CLIENT.start()
 
+
+class Ring(threading.Thread):
+
+    """Class handling the ringing of the Autophon."""
+
+    def __init__(self):
+        """Initialize the Ring."""
+        threading.Thread.__init__(self)
+        self._ring = threading.Event()
+        self.start()
+
+    def run(self):
+        """Code of the thread."""
+        self._ring.wait()
+        print('RING')
+        self._ring.clear()
+
+    def ring(self):
+        """Ring the phone."""
+        self._ring.set()
+
+RING = Ring()
+
+
 def open_door():
     """Open the door of the Espace Creation."""
     with requests.Session() as s:
@@ -39,9 +64,9 @@ def open_door():
 
 
 @CLIENT.on(events.NewMessage(chats=BOT_ID, incoming=True))
-def on_bot_message(event):
+def on_bot_message(_):
     """Handle messages from the door bot."""
-    open_door()
+    RING.ring()
 
 
 def main():
