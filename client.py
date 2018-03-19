@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Telegram client for the FabLab Sion."""
 
 import os
