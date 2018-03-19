@@ -28,6 +28,7 @@ CLIENT = TelegramClient('fablab_telegram_client',
                         API_HASH,
                         update_workers=1,
                         spawn_read_thread=False)
+CLIENT.start()
 
 def open_door():
     """Open the door of the Espace Creation."""
@@ -45,7 +46,6 @@ def on_bot_message(event):
 
 def main():
     """Start the Autophon."""
-    CLIENT.start()
     CLIENT.idle()
 
 
