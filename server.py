@@ -40,9 +40,8 @@ def open_door():
     with requests.Session() as s:
         s.post(EASYDOOR_LOGINURL, {'login_username': EASYDOOR_USERNAME,
                                    'login_password': EASYDOOR_PASSWORD})
-        return s.get(EASYDOOR_OPENDOOR)
+        return s.get(EASYDOOR_OPENDOOR).status_code == 200
 
-print(open_door())
 CLIENT.idle()
 
 
