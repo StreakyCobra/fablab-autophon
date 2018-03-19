@@ -2,15 +2,9 @@
 """Telegram client for the FabLab Sion."""
 
 import os
-import time
 
 import requests
 from telethon import TelegramClient, events
-
-import RPi.GPIO as GPIO
-
-# Initialize Raspberry Pi GPIO
-GPIO.setmode(GPIO.BOARD)
 
 # If an `.env` file is present, parse it contents in the environment variables
 if os.path.exists('.env'):
@@ -28,14 +22,12 @@ EASYDOOR_OPENDOOR = os.environ['EASYDOOR_OPENDOOR']
 EASYDOOR_USERNAME = os.environ['EASYDOOR_USERNAME']
 EASYDOOR_PASSWORD = os.environ['EASYDOOR_PASSWORD']
 
-# Create telegram client and start it
+# Create a telegram client and start it
 CLIENT = TelegramClient('fablab_telegram_client',
                         API_ID,
                         API_HASH,
                         update_workers=1,
                         spawn_read_thread=False)
-CLIENT.start()
-
 
 def open_door():
     """Open the door of the Espace Creation."""
@@ -51,4 +43,11 @@ def on_bot_message(event):
     open_door()
 
 
-CLIENT.idle()
+def main():
+    """Start the Autophon."""
+    CLIENT.start()
+    CLIENT.idle()
+
+
+if __name__ == '__main__':
+    main()
