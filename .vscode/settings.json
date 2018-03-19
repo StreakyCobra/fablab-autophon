@@ -4,6 +4,7 @@
         ".autoxsh": "python"
     },
     "cSpell.words": [
-        "Autophon"
+        "Autophon",
+        "GPIO"
     ]
 }

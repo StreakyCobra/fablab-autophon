@@ -5,18 +5,19 @@
 #    pip-compile --output-file requirements.txt requirements.in
 #
 aspy.yaml==1.0.0          # via pre-commit
-astroid==1.6.1            # via pylint
+astroid==1.6.2            # via pylint
 autoflake==1.1
 autopep8==1.3.4
 cached-property==1.4.0    # via pre-commit
 certifi==2018.1.18        # via requests
+cfgv==1.0.0               # via pre-commit
 chardet==3.0.4            # via requests
 click==6.7                # via pip-tools, safety
 decorator==4.2.1          # via ipython, traitlets
 dparse==0.2.1             # via safety
 first==2.0.1              # via pip-tools
 flake8==3.5.0
-identify==1.0.7           # via pre-commit
+identify==1.0.8           # via pre-commit
 idna==2.6                 # via requests
 ipdb==0.11
 ipython-genutils==0.2.0   # via traitlets
@@ -25,7 +26,7 @@ isort==4.3.4
 jedi==0.11.1              # via ipython
 lazy-object-proxy==1.3.1  # via astroid
 mccabe==0.6.1             # via flake8, pylint
-mypy==0.560
+mypy==0.570
 nodeenv==1.2.0            # via pre-commit
 packaging==17.1           # via dparse, safety
 parso==0.1.1              # via jedi
@@ -33,29 +34,29 @@ pep257==0.7.0
 pexpect==4.4.0            # via ipython
 pickleshare==0.7.4        # via ipython
 pip-tools==1.11.0
-pre-commit==1.6.0
+pre-commit==1.8.2
 prompt-toolkit==1.0.15    # via ipython
-psutil==5.4.3             # via mypy
 ptyprocess==0.5.2         # via pexpect
 pyaes==1.6.1              # via telethon
 pyasn1==0.4.2             # via rsa
 pycodestyle==2.3.1        # via autopep8, flake8
 pyflakes==1.6.0           # via autoflake, flake8
 pygments==2.2.0           # via ipython
-pylint==1.8.2
+pylint==1.8.3
 pyparsing==2.2.0          # via packaging
 pyyaml==3.12              # via aspy.yaml, dparse, pre-commit
 requests==2.18.4          # via safety
 rope==0.10.7
+rpi.gpio==0.6.3
 rsa==3.4.2                # via telethon
 safety==1.7.0
 simplegeneric==0.8.1      # via ipython
-six==1.11.0               # via astroid, dparse, packaging, pip-tools, pre-commit, prompt-toolkit, pylint, traitlets
-telethon==0.17.4.5
+six==1.11.0               # via astroid, cfgv, dparse, packaging, pip-tools, pre-commit, prompt-toolkit, pylint, traitlets
+telethon==0.18.1
 traitlets==4.3.2          # via ipython
 typed-ast==1.1.0          # via mypy
 urllib3==1.22             # via requests
 virtualenv==15.1.0        # via pre-commit
 wcwidth==0.1.7            # via prompt-toolkit
 wrapt==1.10.11            # via astroid
-yapf==0.20.2
+yapf==0.21.0
