@@ -2,5 +2,8 @@
     "python.pythonPath": "${workspaceFolder}/venv/bin/python",
     "files.associations": {
         ".autoxsh": "python"
-    }
+    },
+    "cSpell.words": [
+        "Autophon"
+    ]
 }
