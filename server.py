@@ -2,6 +2,7 @@
 """Telegram client for the FabLab Sion."""
 
 import os
+import requests
 from telethon import TelegramClient, events
 
 # If an `.env` file is present, parse it contents in the environment variables
@@ -11,10 +12,15 @@ if os.path.exists('.env'):
             key, val = line.strip().split('=')
             os.environ[key.strip()] = val.strip()
 
-# Set secrets
+# Get secrets
 API_ID = os.environ['API_ID']
 API_HASH = os.environ['API_HASH']
 BOT_ID = os.environ['BOT_ID']
+EASYDOOR_LOGINURL = os.environ['EASYDOOR_LOGINURL']
+EASYDOOR_OPENDOOR = os.environ['EASYDOOR_OPENDOOR']
+EASYDOOR_USERNAME = os.environ['EASYDOOR_USERNAME']
+EASYDOOR_PASSWORD = os.environ['EASYDOOR_PASSWORD']
+
 # Create telegram client and start it
 CLIENT = TelegramClient('fablab_telegram_client',
                         API_ID,
@@ -28,4 +34,13 @@ def on_bot_message(event):
     """Handle messages from the door bot."""
     print(event.raw_text)
 
+
+def open_door():
+    """Open the door of the Espace Creation."""
+    with requests.Session() as s:
+        s.post(EASYDOOR_LOGINURL, {'login_username': EASYDOOR_USERNAME,
+                                   'login_password': EASYDOOR_PASSWORD})
+        return s.get(EASYDOOR_OPENDOOR)
+
+print(open_door())
 CLIENT.idle()
