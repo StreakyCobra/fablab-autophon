@@ -9,7 +9,7 @@ from telethon import TelegramClient, events
 if os.path.exists('.env'):
     with open('.env', 'r') as f:
         for line in f.readlines():
-            key, val = line.strip().split('=')
+            key, val = line.strip().split('=', maxsplit=1)
             os.environ[key.strip()] = val.strip()
 
 # Get secrets
@@ -44,3 +44,29 @@ def open_door():
 
 print(open_door())
 CLIENT.idle()
+
+
+# import time
+# import RPi.GPIO as GPIO
+# GPIO.setmode(GPIO.BOARD)
+# GPIO.setup(11, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
+# GPIO.setup(13, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
+
+# while True:
+#     while GPIO.input(13) == 0:
+#         time.sleep(0.01)
+#     print('started')
+#     last = time.time()
+#     once = False
+#     triggered = True
+#     number = 0
+#     while not once or time.time() - last <= 0.2:
+#         if triggered and GPIO.input(11) == 0:
+#             last = time.time()
+#             once = True
+#             triggered = False
+#             number += 1
+#         elif GPIO.input(11) == 1:
+#             triggered = True
+#         time.sleep(0.01)
+#     print("Number {}".format(number))
