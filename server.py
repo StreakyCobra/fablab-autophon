@@ -4,6 +4,13 @@
 import os
 from telethon import TelegramClient, events
 
+# If an `.env` file is present, parse it contents in the environment variables
+if os.path.exists('.env'):
+    with open('.env', 'r') as f:
+        for line in f.readlines():
+            key, val = line.strip().split('=')
+            os.environ[key.strip()] = val.strip()
+
 # Set secrets
 API_ID = os.environ['API_ID']
 API_HASH = os.environ['API_HASH']
