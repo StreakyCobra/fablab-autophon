@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Telegram client for the FabLab Sion."""
+"""Autophon of the FabLab Sion."""
 
 ################################################################################
 # IMPORTS                                                                      #
@@ -42,17 +42,17 @@ GPIO.setmode(GPIO.BOARD)
 
 # Pins number
 IO_DIAL = 11
+IO_RING = 12
 IO_PULSES = 13
 IO_HANGER = 15
-IO_RING = 12
 
 # Inputs
-GPIO.setup(IO_DIAL, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)    # Dialing
-GPIO.setup(IO_PULSES, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Dial pulses
-GPIO.setup(IO_HANGER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Hanger
+GPIO.setup(IO_DIAL, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(IO_PULSES, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(IO_HANGER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 # Outputs
-GPIO.setup(IO_RING, GPIO.OUT)                               #  RING output
+GPIO.setup(IO_RING, GPIO.OUT)
 
 ################################################################################
 # TELEGRAM                                                                     #
