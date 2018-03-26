@@ -5,6 +5,7 @@ ipdb
 # Project requirements
 telethon
 RPi.GPIO
+logzero
 
 # Python tooling
 autoflake
