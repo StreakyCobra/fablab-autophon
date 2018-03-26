@@ -13,6 +13,8 @@ import requests
 import RPi.GPIO as GPIO
 from telethon import TelegramClient, events
 
+from logzero import logger
+
 ################################################################################
 # CONFIGURATIONS                                                               #
 ################################################################################
@@ -45,11 +47,13 @@ IO_DIAL = 11
 IO_RING = 12
 IO_PULSES = 13
 IO_HANGER = 15
+IO_PUSHER = 18
 
 # Inputs
 GPIO.setup(IO_DIAL, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(IO_PULSES, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(IO_HANGER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(IO_PUSHER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 # Outputs
 GPIO.setup(IO_RING, GPIO.OUT)
@@ -108,28 +112,17 @@ class Hanger(threading.Thread):
     """Class handling the hanger of the Autophon."""
 
     def __init__(self):
-        """Initialize the Ring."""
+        """Initialize the Hanger."""
         threading.Thread.__init__(self)
-        self._ring = threading.Event()
+        self.triggered = threading.Event()
         self.start()
 
     def run(self):
         """Code of the thread."""
         while True:
-            self._ring.wait()
-            while self._ring.is_set():
-                GPIO.output(IO_RING, True)
-                time.sleep(.5)
-                GPIO.output(IO_RING, False)
-                time.sleep(1.5)
-
-    def start_ring(self):
-        """Ring the phone."""
-        self._ring.set()
-
-    def stop_ring(self):
-        """Stop the phone ringing."""
-        self._ring.clear()
+            self.triggered.clear()
+            GPIO.wait_for_edge(IO_HANGER, GPIO.FALLING)
+            self.triggered.set()
 
 # Create thread objects
 RING = Ring()
@@ -142,11 +135,9 @@ HANGER = Hanger()
 def ask_for_door():
     """Ask for opening the door through Autophon."""
     RING.start_ring()
-    channel = GPIO.wait_for_edge(IO_HANGER, GPIO.RISING, timeout=20000)
-    if channel is not None:
+    triggered = HANGER.triggered.wait(timeout=20)
+    if triggered:
         open_door()
-    else:
-        print(channel)
     RING.stop_ring()
 
 def open_door():
@@ -162,6 +153,11 @@ def open_door():
 
 def main():
     """Start the Autophon."""
+    # Pusher button
+    GPIO.add_event_detect(IO_PUSHER,
+                          GPIO.FALLING,
+                          callback=lambda _: open_door(),
+                          bouncetime=500)
     CLIENT.idle()
 
 def cleanup():
