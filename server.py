@@ -11,9 +11,8 @@ import time
 
 import requests
 import RPi.GPIO as GPIO
-from telethon import TelegramClient, events
-
 from logzero import logger
+from telethon import TelegramClient, events
 
 ################################################################################
 # CONFIGURATIONS                                                               #
@@ -73,6 +72,7 @@ CLIENT.start()
 @CLIENT.on(events.NewMessage(chats=BOT_ID, incoming=True))
 def on_bot_message(_):
     """Handle messages from the door bot."""
+    logger.info('Someone is ringing at the door')
     ask_for_door()
 
 ################################################################################
@@ -83,9 +83,9 @@ class Ring(threading.Thread):
 
     """Class handling the ringing of the Autophon."""
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """Initialize the Ring."""
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, *args, **kwargs)
         self._ring = threading.Event()
         self.start()
 
@@ -111,9 +111,9 @@ class Hanger(threading.Thread):
 
     """Class handling the hanger of the Autophon."""
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """Initialize the Hanger."""
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, *args, **kwargs)
         self.triggered = threading.Event()
         self.start()
 
@@ -122,30 +122,61 @@ class Hanger(threading.Thread):
         while True:
             self.triggered.clear()
             GPIO.wait_for_edge(IO_HANGER, GPIO.FALLING)
+            logger.debug('Hanger actionned')
             self.triggered.set()
 
+class Door(threading.Thread):
+
+    """Class handling the opening of the door."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the Door handler."""
+        threading.Thread.__init__(self, *args, **kwargs)
+        self._trigger = threading.Event()
+        self.start()
+
+    def run(self):
+        """Code of the thread."""
+        while True:
+            self._trigger.wait()
+            logger.info('Trying to open the door')
+            with requests.Session() as s:
+                s.post(EASYDOOR_LOGINURL, {'login_username': EASYDOOR_USERNAME,
+                                        'login_password': EASYDOOR_PASSWORD})
+                success = s.get(EASYDOOR_OPENDOOR).status_code == 200
+                if success:
+                    logger.info('Door opened')
+                else:
+                    logger.error('Failed to open the door')
+            self._trigger.clear()
+
+    def open(self):
+        """Open the door."""
+        self._trigger.set()
+
 # Create thread objects
-RING = Ring()
-HANGER = Hanger()
+RING = Ring(daemon=True)
+HANGER = Hanger(daemon=True)
+DOOR = Door(daemon=True)
 
 ################################################################################
 # FUNCTIONS                                                                    #
 ################################################################################
+
+def open_door():
+    """Open the door of the Espace Creation."""
+    DOOR.open()
 
 def ask_for_door():
     """Ask for opening the door through Autophon."""
     RING.start_ring()
     triggered = HANGER.triggered.wait(timeout=20)
     if triggered:
+        logger.info('Someone hanged out')
         open_door()
+    else:
+        logger.warn('Nobody hanged out')
     RING.stop_ring()
-
-def open_door():
-    """Open the door of the Espace Creation."""
-    with requests.Session() as s:
-        s.post(EASYDOOR_LOGINURL, {'login_username': EASYDOOR_USERNAME,
-                                   'login_password': EASYDOOR_PASSWORD})
-        return s.get(EASYDOOR_OPENDOOR).status_code == 200
 
 ################################################################################
 # SCRIPT                                                                       #
@@ -153,15 +184,16 @@ def open_door():
 
 def main():
     """Start the Autophon."""
-    # Pusher button
+    logger.info('Autophon started')
     GPIO.add_event_detect(IO_PUSHER,
-                          GPIO.FALLING,
-                          callback=lambda _: open_door(),
-                          bouncetime=500)
+                          GPIO.RISING,
+                          callback=lambda x: print(x),
+                          bouncetime=200)
     CLIENT.idle()
 
 def cleanup():
-    """Cleanup the GPIO."""
+    """Clean up the GPIO."""
+    logger.info('Clean up the GPIO')
     GPIO.cleanup()
 
 if __name__ == '__main__':
