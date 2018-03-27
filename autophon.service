@@ -1,0 +1,14 @@
+[Unit]
+Description=Autophon of the FabLab Sion
+After=network.target
+
+[Service]
+User=fablab
+Group=fablab
+WorkingDirectory=/home/fablab/fablab-autophon/
+Type=simple
+ExecStart=/home/fablab/fablab-autophon/start.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
