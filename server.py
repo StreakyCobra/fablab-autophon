@@ -6,6 +6,7 @@
 ################################################################################
 
 import os
+import sys
 import threading
 import time
 
@@ -33,6 +34,9 @@ EASYDOOR_LOGINURL = os.environ['EASYDOOR_LOGINURL']
 EASYDOOR_OPENDOOR = os.environ['EASYDOOR_OPENDOOR']
 EASYDOOR_USERNAME = os.environ['EASYDOOR_USERNAME']
 EASYDOOR_PASSWORD = os.environ['EASYDOOR_PASSWORD']
+
+# Whether a TTY is available
+TTY = sys.stdin.isatty()
 
 ################################################################################
 # GPIO                                                                         #
@@ -66,13 +70,12 @@ CLIENT = TelegramClient('fablab_telegram_client',
                         API_ID,
                         API_HASH,
                         update_workers=1,
-                        spawn_read_thread=False)
+                        spawn_read_thread=TTY)
 CLIENT.start()
 
 @CLIENT.on(events.NewMessage(chats=BOT_ID, incoming=True))
 def on_bot_message(_):
     """Handle messages from the door bot."""
-    logger.info('Someone is ringing at the door')
     ask_for_door()
 
 ################################################################################
@@ -107,24 +110,6 @@ class Ring(threading.Thread):
         """Stop the phone ringing."""
         self._ring.clear()
 
-class Hanger(threading.Thread):
-
-    """Class handling the hanger of the Autophon."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the Hanger."""
-        threading.Thread.__init__(self, *args, **kwargs)
-        self.triggered = threading.Event()
-        self.start()
-
-    def run(self):
-        """Code of the thread."""
-        while True:
-            self.triggered.clear()
-            GPIO.wait_for_edge(IO_HANGER, GPIO.FALLING)
-            logger.debug('Hanger actionned')
-            self.triggered.set()
-
 class Door(threading.Thread):
 
     """Class handling the opening of the door."""
@@ -154,14 +139,28 @@ class Door(threading.Thread):
         """Open the door."""
         self._trigger.set()
 
-# Create thread objects
+################################################################################
+# OBJECTS                                                                      #
+################################################################################
+
 RING = Ring(daemon=True)
-HANGER = Hanger(daemon=True)
 DOOR = Door(daemon=True)
+HANGER = threading.Event()
+PUSHER = threading.Event()
 
 ################################################################################
 # FUNCTIONS                                                                    #
 ################################################################################
+
+def input_triggered(channel):
+    """Input triggered."""
+    logger.debug("Input {} triggered".format(channel))
+    if channel == IO_PUSHER:
+        PUSHER.set()
+        PUSHER.clear()
+    elif channel == IO_HANGER:
+        HANGER.set()
+        HANGER.clear()
 
 def open_door():
     """Open the door of the Espace Creation."""
@@ -169,35 +168,44 @@ def open_door():
 
 def ask_for_door():
     """Ask for opening the door through Autophon."""
+    logger.info('Someone is ringing at the door')
     RING.start_ring()
-    triggered = HANGER.triggered.wait(timeout=20)
+    triggered = HANGER.wait(timeout=20)
     if triggered:
-        logger.info('Someone hanged out')
+        logger.info('Someone picked up the phone')
         open_door()
     else:
-        logger.warn('Nobody hanged out')
+        logger.warn('Nobody picked up the phone')
     RING.stop_ring()
 
 ################################################################################
-# SCRIPT                                                                       #
+# SCRIPT HANDLING                                                              #
 ################################################################################
 
 def main():
     """Start the Autophon."""
-    logger.info('Autophon started')
+    # Register GPIO events detection
     GPIO.add_event_detect(IO_PUSHER,
                           GPIO.RISING,
-                          callback=lambda x: print(x),
+                          callback=input_triggered,
                           bouncetime=200)
-    CLIENT.idle()
-
-def cleanup():
-    """Clean up the GPIO."""
-    logger.info('Clean up the GPIO')
-    GPIO.cleanup()
+    GPIO.add_event_detect(IO_HANGER,
+                          GPIO.FALLING,
+                          callback=input_triggered,
+                          bouncetime=200)
+    if TTY:
+        # Wait for the exit command to stop
+        while input() != 'exit':
+            pass
+    else:
+        CLIENT.idle()
 
 if __name__ == '__main__':
     try:
+        logger.info('Starting the autophon')
         main()
+    except KeyboardInterrupt:
+        logger.info('Autophon stopped by the user')
     finally:
-        cleanup()
+        logger.info('Clean up the GPIO')
+        GPIO.cleanup()
