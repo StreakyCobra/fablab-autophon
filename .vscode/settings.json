@@ -5,6 +5,8 @@
     },
     "cSpell.words": [
         "Autophon",
-        "GPIO"
+        "GPIO",
+        "GPIOs",
+        "isatty"
     ]
 }
