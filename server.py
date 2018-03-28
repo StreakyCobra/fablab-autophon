@@ -56,15 +56,11 @@ def event_handler(channel):
     """Handle GPIOs events."""
     logger.debug("Input %s triggered", channel)
     if channel == IO_HANGER:
-        if not GPIO.input(IO_HANGER):
-            HANGER.set()
-        else:
-            HANGER.clear()
+        HANGER.set()
+        HANGER.clear()
     elif channel == IO_PUSHER:
-        if GPIO.input(IO_PUSHER):
-            PUSHER.set()
-        else:
-            PUSHER.clear()
+        PUSHER.set()
+        PUSHER.clear()
     else:
         raise ValueError('Event not supported')
 
@@ -180,10 +176,12 @@ class Request(threading.Thread):
         while True:
             self._trigger.wait()
             timer = threading.Timer(20, self.cancel)
+            timer.start()
             RING.start_ring()
             while self._trigger.is_set():
                 if HANGER.wait(timeout=.5):
                     logger.info('Someone picked up the phone')
+                    self._trigger.clear()
                     DOOR.open()
             timer.cancel()
             RING.stop_ring()
@@ -221,6 +219,7 @@ CLIENT.start()
 @CLIENT.on(events.NewMessage(chats=BOT_ID, incoming=True))
 def on_bot_message(_):
     """Handle messages from the door bot."""
+    logger.debug('Message received from %s', BOT_ID)
     REQUEST.request()
 
 ################################################################################
