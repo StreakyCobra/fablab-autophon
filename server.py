@@ -35,6 +35,8 @@ EASYDOOR_LOGINURL = os.environ['EASYDOOR_LOGINURL']
 EASYDOOR_OPENDOOR = os.environ['EASYDOOR_OPENDOOR']
 EASYDOOR_USERNAME = os.environ['EASYDOOR_USERNAME']
 EASYDOOR_PASSWORD = os.environ['EASYDOOR_PASSWORD']
+CODE_OPEN = os.environ['CODE_OPEN']
+CODE_CANCEL = os.environ['CODE_CANCEL']
 
 # Check whether it is an interactive session
 IS_INTERACTIVE = sys.stdin.isatty()
@@ -43,7 +45,7 @@ IS_INTERACTIVE = sys.stdin.isatty()
 loglevel(10 if IS_INTERACTIVE else 20)
 
 # Pin numbers
-IO_DIAL = 11
+IO_DIALER = 11
 IO_RING = 12
 IO_PULSES = 13
 IO_HANGER = 15
@@ -55,6 +57,7 @@ IO_PUSHER = 18
 
 HANGER = threading.Event()
 PUSHER = threading.Event()
+DIALER = threading.Event()
 
 def event_handler(channel):
     """Handle GPIOs events."""
@@ -62,6 +65,10 @@ def event_handler(channel):
         HANGER.set()
         time.sleep(.1)
         HANGER.clear()
+    elif channel == IO_DIALER and GPIO.input(IO_DIALER):
+        DIALER.set()
+        time.sleep(.1)
+        DIALER.clear()
     elif channel == IO_PUSHER and GPIO.input(IO_PUSHER):
         PUSHER.set()
         PUSHER.clear()
@@ -79,7 +86,7 @@ def event_handler(channel):
 GPIO.setmode(GPIO.BOARD)
 
 # Inputs
-GPIO.setup(IO_DIAL, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(IO_DIALER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(IO_PULSES, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(IO_HANGER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(IO_PUSHER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -88,12 +95,16 @@ GPIO.setup(IO_PUSHER, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(IO_RING, GPIO.OUT)
 
 # Register GPIOs events detection
-GPIO.add_event_detect(IO_PUSHER,
+GPIO.add_event_detect(IO_DIALER,
                       GPIO.RISING,
                       callback=event_handler,
                       bouncetime=50)
 GPIO.add_event_detect(IO_HANGER,
                       GPIO.FALLING,
+                      callback=event_handler,
+                      bouncetime=50)
+GPIO.add_event_detect(IO_PUSHER,
+                      GPIO.RISING,
                       callback=event_handler,
                       bouncetime=50)
 
@@ -157,6 +168,61 @@ class Door(threading.Thread):
         self._trigger.set()
         self._trigger.clear()
 
+class Dial(threading.Thread):
+    """Class handling the Dial of the Autophon."""
+    def __init__(self, *args, **kwargs):
+        """Initialize the Dial of the autophon."""
+        threading.Thread.__init__(self, *args, **kwargs)
+        self.start()
+
+    def run(self):
+        """Code of the thread."""
+        while True:
+            DIALER.wait()
+            self.handle_code(self.listen())
+            DIALER.clear()
+
+    def listen(self):
+        """Listen for digits."""
+        number = ''
+        last_digit = time.time()
+        while True:
+            while GPIO.input(IO_DIALER) == 0:
+                if time.time() - last_digit >= 2:
+                    return number
+                time.sleep(0.01)
+            last = time.time()
+            once = False
+            triggered = True
+            digit = 0
+            while not once or time.time() - last <= 0.2:
+                if triggered and GPIO.input(IO_PULSES) == 0:
+                    last = time.time()
+                    once = True
+                    triggered = False
+                    digit += 1
+                elif GPIO.input(IO_PULSES) == 1:
+                    triggered = True
+                time.sleep(0.01)
+            number += str(digit % 10)
+            last_digit = time.time()
+
+    def handle_code(self, number):
+        """Handle a entered code."""
+        if number.startswith(CODE_OPEN) and len(number) == len(CODE_OPEN) + 1:
+            until = time.time() + int(number[-1]) * 3600
+            REQUEST.activate_auto(until)
+            logger.info('Code %s: Automatic opening for %s hours', number, number[-1])
+        elif number == CODE_CANCEL:
+            REQUEST.cancel_auto()
+            logger.info('Code %s: Cancel automatic opening', number)
+        else:
+            logger.info('Code %s: Invalid', number)
+            return
+        RING.start_ring()
+        time.sleep(.5)
+        RING.stop_ring()
+
 class Request(threading.Thread):
     """Class handling the request to open the FabLab."""
     def __init__(self, *args, **kwargs):
@@ -165,6 +231,7 @@ class Request(threading.Thread):
         self._trigger = threading.Event()
         self._timer = None
         self._delay = 20
+        self._auto_until = None
         self.start()
 
     def run(self):
@@ -172,6 +239,15 @@ class Request(threading.Thread):
         while True:
             self._trigger.wait()
             logger.info('Someone is requesting to open the door')
+            # Handling automatic mode
+            if self._auto_until is not None and (self._auto_until - time.time()) >= 0:
+                logger.info('Automatic opening mode, opening the door')
+                DOOR.open()
+                RING.start_ring()
+                time.sleep(.25)
+                RING.stop_ring()
+                self.cancel()
+                return
             self._timer = threading.Timer(self._delay, self._timeout)
             self._timer.start()
             RING.start_ring()
@@ -207,6 +283,14 @@ class Request(threading.Thread):
         """Return true if a request is ongoing."""
         return self._trigger.is_set()
 
+    def activate_auto(self, until):
+        """Set automatic opening mode."""
+        self._auto_until = until
+
+    def cancel_auto(self):
+        """Cancel automatic opening mode."""
+        self._auto_until = None
+
 class Direct(threading.Thread):
     """Class handling direct requests to open the FabLab."""
     def __init__(self, *args, **kwargs):
@@ -222,10 +306,14 @@ class Direct(threading.Thread):
             if REQUEST.is_requesting():
                 REQUEST.cancel()
             DOOR.open()
+            RING.start_ring()
+            time.sleep(.25)
+            RING.stop_ring()
 
 # Create the threads
 RING = Ring(daemon=True)
 DOOR = Door(daemon=True)
+DIAL = Dial(daemon=True)
 REQUEST = Request(daemon=True)
 DIRECT = Direct(daemon=True)
 
