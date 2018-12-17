@@ -37,6 +37,7 @@ EASYDOOR_USERNAME = os.environ['EASYDOOR_USERNAME']
 EASYDOOR_PASSWORD = os.environ['EASYDOOR_PASSWORD']
 CODE_OPEN = os.environ['CODE_OPEN']
 CODE_CANCEL = os.environ['CODE_CANCEL']
+CODE_RING = os.environ['CODE_RING']
 
 # Check whether it is an interactive session
 IS_INTERACTIVE = sys.stdin.isatty()
@@ -140,6 +141,10 @@ class Ring(threading.Thread):
         """Stop the phone ringing."""
         self._trigger.clear()
 
+    def is_ringing(self):
+        """Return True if the phone is ringing."""
+        return self._trigger.is_set()
+
 class Door(threading.Thread):
     """Class handling the opening of the door."""
     def __init__(self, *args, **kwargs):
@@ -216,6 +221,12 @@ class Dial(threading.Thread):
         elif number == CODE_CANCEL:
             REQUEST.cancel_auto()
             logger.info('Code %s: Cancel automatic opening', number)
+        elif number == CODE_RING:
+            if RING.is_ringing():
+                RING.stop_ring()
+            else:
+                RING.start_ring()
+                threading.Timer(20, RING.stop_ring).start()
         else:
             logger.info('Code %s: Invalid', number)
             return
